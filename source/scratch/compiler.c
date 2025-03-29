@@ -116,10 +116,16 @@ struct Compile_Context {
 };
 
 
-static bool token_eq(String *source, Token token, const char *keyword) {
+static bool token_eq_kw(String *source, Token token, const char *keyword) {
 	size_t length = token.end - token.start;
 	if (length != strlen(keyword)) return false;
 	return strncmp(&source->bytes[token.start], keyword, length) == 0;
+}
+
+static bool token_eq(String *source, Token a, Token b) {
+	size_t length = a.end - a.start;
+	if ((b.end-b.start) != length) return false;
+	return memcpy(&source->bytes[a.start], &source->bytes[b.start], length);
 }
 
 static void eat_whitespace(Stream *stream) {
@@ -336,28 +342,28 @@ static Token next_token(Stream *stream) {
 			(void)next_char(stream);
 		}
 
-		if      (token_eq(stream->source,result,"as"))			result.type = TOKEN_AS;
-		else if (token_eq(stream->source,result,"break"))		result.type = TOKEN_BREAK;
-		else if (token_eq(stream->source,result,"class"))		result.type = TOKEN_CLASS;
-		else if (token_eq(stream->source,result,"construct"))	result.type = TOKEN_CONSTRUCT;
-		else if (token_eq(stream->source,result,"continue"))	result.type = TOKEN_CONTINUE;
-		else if (token_eq(stream->source,result,"else"))		result.type = TOKEN_ELSE;
-		else if (token_eq(stream->source,result,"false"))		result.type = TOKEN_FALSE;
-		else if (token_eq(stream->source,result,"field"))		result.type = TOKEN_FIELD;
-		else if (token_eq(stream->source,result,"for"))			result.type = TOKEN_FOR;
-		else if (token_eq(stream->source,result,"foreign"))		result.type = TOKEN_FOREIGN;
-		else if (token_eq(stream->source,result,"if"))			result.type = TOKEN_IF;
-		else if (token_eq(stream->source,result,"import"))		result.type = TOKEN_IMPORT;
-		else if (token_eq(stream->source,result,"in"))			result.type = TOKEN_IN;
-		else if (token_eq(stream->source,result,"is"))			result.type = TOKEN_IS;
-		else if (token_eq(stream->source,result,"null"))		result.type = TOKEN_NULL;
-		else if (token_eq(stream->source,result,"return"))		result.type = TOKEN_RETURN;
-		else if (token_eq(stream->source,result,"static"))		result.type = TOKEN_STATIC;
-		else if (token_eq(stream->source,result,"super"))		result.type = TOKEN_SUPER;
-		else if (token_eq(stream->source,result,"this"))		result.type = TOKEN_THIS;
-		else if (token_eq(stream->source,result,"true"))		result.type = TOKEN_TRUE;
-		else if (token_eq(stream->source,result,"var"))			result.type = TOKEN_VAR;
-		else if (token_eq(stream->source,result,"while"))		result.type = TOKEN_WHILE;
+		if      (token_eq_kw(stream->source,result,"as"))			result.type = TOKEN_AS;
+		else if (token_eq_kw(stream->source,result,"break"))		result.type = TOKEN_BREAK;
+		else if (token_eq_kw(stream->source,result,"class"))		result.type = TOKEN_CLASS;
+		else if (token_eq_kw(stream->source,result,"construct"))	result.type = TOKEN_CONSTRUCT;
+		else if (token_eq_kw(stream->source,result,"continue"))	result.type = TOKEN_CONTINUE;
+		else if (token_eq_kw(stream->source,result,"else"))		result.type = TOKEN_ELSE;
+		else if (token_eq_kw(stream->source,result,"false"))		result.type = TOKEN_FALSE;
+		else if (token_eq_kw(stream->source,result,"field"))		result.type = TOKEN_FIELD;
+		else if (token_eq_kw(stream->source,result,"for"))			result.type = TOKEN_FOR;
+		else if (token_eq_kw(stream->source,result,"foreign"))		result.type = TOKEN_FOREIGN;
+		else if (token_eq_kw(stream->source,result,"if"))			result.type = TOKEN_IF;
+		else if (token_eq_kw(stream->source,result,"import"))		result.type = TOKEN_IMPORT;
+		else if (token_eq_kw(stream->source,result,"in"))			result.type = TOKEN_IN;
+		else if (token_eq_kw(stream->source,result,"is"))			result.type = TOKEN_IS;
+		else if (token_eq_kw(stream->source,result,"null"))		result.type = TOKEN_NULL;
+		else if (token_eq_kw(stream->source,result,"return"))		result.type = TOKEN_RETURN;
+		else if (token_eq_kw(stream->source,result,"static"))		result.type = TOKEN_STATIC;
+		else if (token_eq_kw(stream->source,result,"super"))		result.type = TOKEN_SUPER;
+		else if (token_eq_kw(stream->source,result,"this"))		result.type = TOKEN_THIS;
+		else if (token_eq_kw(stream->source,result,"true"))		result.type = TOKEN_TRUE;
+		else if (token_eq_kw(stream->source,result,"var"))			result.type = TOKEN_VAR;
+		else if (token_eq_kw(stream->source,result,"while"))		result.type = TOKEN_WHILE;
 		else {
 			result.type = TOKEN_IDENTIFIER;
 		}
@@ -500,7 +506,7 @@ Code *display_unknown_token_error(Compile_Context *ctx) {
 	Token token = peek_token(ctx->stream);
 	String *source = ctx->stream->source;
 	set_error(ctx, &token, "This symbol is not defined in Cardinal.");
-	if (token_eq(source,token,"`") || token_eq(source,token,"'")) {
+	if (token_eq_kw(source,token,"`") || token_eq_kw(source,token,"'")) {
 		add_note(ctx, "Only the double quote (\") is used for strings -- not the backtick"
 					  "(`) or the single quote (').");
 	}
@@ -561,7 +567,7 @@ static bool in_group(Token token, const Token_Type *group) {
 
 static Token token_union(Token a, Token b) {
 	Token result = {
-		TOKEN_UNKNOWN,
+		TOKEN_MERGED,
 		a.start < b.start ? a.start : b.start,
 		a.end > b.end ? a.end : b.end
 	};
@@ -584,6 +590,14 @@ static Token token_union(Token a, Token b) {
 #define SU_MONO					0x02
 #define SU_INTER				0x03
 
+/*
+typedef struct Stack_Value Stack_Value;
+struct Stack_Value {
+	Token token;
+	bool is_local;
+};
+*/
+
 #include <stdlib.h>
 Code *car_compile(Car_VM *vm, Module *module, Fiber *fiber, String *source) {
 	Code *code = (Code*)car_new_obj(vm, sizeof(Code), CODE, NULL);
@@ -599,7 +613,8 @@ Code *car_compile(Car_VM *vm, Module *module, Fiber *fiber, String *source) {
 	LIST(uint32_t, states);
 	INIT_LIST(states);
 
-	LIST(Code_Context, code_ctx);
+	LIST(Token, stack_values);
+	INIT_LIST(stack_values);
 
 	ADD(vm, states, ST_START);
 
@@ -788,6 +803,7 @@ Code *car_compile(Car_VM *vm, Module *module, Fiber *fiber, String *source) {
 		state_continue: {}
 	}
 
+	code->required_stack_space = stack_values_max;
 	set_error(&ctx, NULL, "Compiled successfully!\n");
 
 	return NULL;

@@ -1,0 +1,25 @@
+/* This is some stuff /* asd asd */ asd asd */
+
+as break class construct continue else false for foreign if
+import in is null return static super this true var while
+
+( ) [ ] . - ! ~ * / % + 0 ..< .. << >> ? : 
+
+class Test {
+	static blarg() {
+		System.print(
+			"Hello %(5*2) World!"
+		)
+	}
+}
+
+0.123
+2.sin
+
+CLASS IDENT:Test OPEN_CURLY NEWLINE
+STATIC IDENT:blarg OPEN_PAREN CLOSE_PAREN OPEN_CURLY NEWLINE
+IDENT:System DOT IDENT:Print OPEN_PAREN NEWLINE
+STRING_START ... NEWLINE
+CLOSE_PAREN NEWLINE
+CLOSE_CURLY NEWLINE
+CLOSE_CURLY NEWLINE

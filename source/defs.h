@@ -61,7 +61,11 @@ struct Log_Entry {
 
 #define ALLOC(vm, size) (vm->realloc_fn(NULL,(size), vm->userdata))
 
+#ifdef CAR_DEBUG
 void car_report_unreachable(const char *file, int line, const char *function);
 #define UNREACHABLE() car_report_unreachable(__FILE__,__LINE__,__func__);
+#else
+#define UNREACHABLE() __builtin_unreachable();
+#endif
 
 #endif

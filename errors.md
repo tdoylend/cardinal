@@ -7,6 +7,7 @@ Module `lib.hal`, line 25, in `syscall(_,_)`:
 
 Warning: The method `containis(_)` is not defined anywhere in the program. It
          seems likely to be a typo.
+Note:    Perhaps you meant `contains(_)`?
 
 [Runtime Error]
 

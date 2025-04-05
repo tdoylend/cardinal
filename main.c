@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	Car_Config config;
-	if (!car_init_default_config(&config, NULL)) {
+	if (!car_init_default_config(&config, sizeof(config))) {
 		fprintf(stderr,"Your version of Cardinal was compiled without default config.\n");
 		fprintf(stderr,"Please recompile with a compatible version of Cardinal.\n");
 		exit(2);
@@ -31,6 +31,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr,"Could not open the script `%s`.\n",argv[1]);
 		return 2;
 	}
+
 	fseek(f,0,SEEK_END);
 	int length = ftell(f);
 	fseek(f,0,SEEK_SET);
@@ -41,48 +42,13 @@ int main(int argc, char *argv[]) {
 
 	Car_VM *vm = car_new_vm(&config);
 
-	Car_Interpret_Result result = car_interpret(vm, "main", argv[1], source);
+	bool result = car_compile_and_run(vm, "main", source);
 
-	if (result == CAR_SUCCESS) {
-		printf("Success!\n");
-	} else if (result == CAR_COMPILATION_ERROR) {
-		printf("Compilation error\n");
-	} else if (result == CAR_RUNTIME_ERROR) {
-		printf("Runtime error\n");
-	} else {
-		printf("Unknown result code?? How did we get here\n");
-	}
-
-	/*
-	config.userdata = malloc(car_get_default_userdata_size());
-
-	Car_VM *vm = car_new_vm(&config);
-
-	printf("Your code here.\n");
-	
-	LIST(int, test);
-	INIT_LIST(test);
-	(void)ADD(vm, test, 5);
-	for (size_t i = 0; i < COUNT(test); i ++) {
-		printf("%d\n", test[i]);
-	}
-
-	FILE *f = fopen("script.car","rb");
-	fseek(f,0,SEEK_END);
-	int length = ftell(f);
-	fseek(f,0,SEEK_SET);
-	char *source = malloc(length+1);
-	fread(source, length, 1, f);
-	source[length] = 0;
-	fclose(f);
-	printf("<<<%s>>>\n",source);
-
-	car_interpret(vm, "main", source);
-
-	car_free_vm(vm);
-
-	free(config.userdata);
-	*/
 	printf("[Program Complete]\n");
-	return 0;
+
+	if (result) {
+		return 0;
+	} else {
+		return 1;
+	}
 }

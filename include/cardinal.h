@@ -21,7 +21,7 @@
 	#error To use CAR_DEBUG, you must also use the default config.
 #endif
 
-#define CAR_API // @todo replace with the necessary declspecls for DLLs.
+#define CAR_API __attribute((stdcall)) // @todo replace with the necessary declspecls for DLLs.
 
 typedef struct Car_VM		Car_VM;
 typedef struct Car_Config	Car_Config;
@@ -29,58 +29,29 @@ typedef struct Car_Version	Car_Version;
 
 typedef struct Car_Traceback_Info Car_Traceback_Info;
 
-typedef void* (Car_Realloc_Fn)(void *ptr, size_t size, void *userdata);
+typedef void *(Car_Realloc_Fn)(void *ptr, size_t size, void *userdata);
 typedef uint64_t (Car_Hash_Fn)(const void *ptr, size_t size);
 typedef void (Car_Write_Fn)(Car_VM *vm, const char *message, size_t length);
-
-enum Car_Report_Level {
-	CAR_REPORT_LEVEL_DEBUG		= 0,
-	CAR_REPORT_LEVEL_NOTE		= 1,
-	CAR_REPORT_LEVEL_WARNING	= 2,
-	CAR_REPORT_LEVEL_TRACEBACK	= 3,
-	CAR_REPORT_LEVEL_ERROR		= 4
-};
-typedef enum Car_Report_Level Car_Report_Level;
-
-typedef void (Car_Report_Message_Fn)(
-		Car_VM *vm,
-		int level,
-		const char *message
-);
-
-typedef void (Car_Report_Source_Fn)(
-		Car_VM *vm,
-		int level,
-		const char *module_name,
-		const char *module_path,
-		const char *block_name,
-		const char *source,
-		size_t start,
-		size_t count
-);
 
 struct Car_Config {
 	Car_Hash_Fn *hash_fn;
 	Car_Realloc_Fn *realloc_fn;
 	Car_Write_Fn *write_fn;
-	Car_Report_Message_Fn *report_message_fn;
-	Car_Report_Source_Fn *report_source_fn;
-	//@todo pad this out for future expansion
+	Car_Write_Fn *report_fn;
+
 	void *userdata;
+	int size;
 };
 
-#define CAR_OPT_MODIFY_ALL_CAPS_VAR			0
-#define CAR_OPT_CALL_SIGNATURE_WITH_NO_DEFS 1
+#define CAR_IGNORE							(0)
+#define CAR_WARN  							(1)
+#define CAR_ERROR 							(2)
 
-#define CAR_OPTVAL_IGNORE	0
-#define CAR_OPTVAL_WARN		1
-#define CAR_OPTVAL_ERROR	2
+#define CAR_DISABLE							(0)
+#define CAR_ENABLE							(1)
 
-CAR_API void car_init_bare_config(Car_Config *config);
-CAR_API bool car_init_default_config(Car_Config *config, void *userdata);
-CAR_API size_t car_get_default_userdata_size();
-CAR_API bool car_set_vm_option(Car_VM *vm, int option, int value);
-CAR_API int car_get_vm_option(Car_VM *vm, int option);
+CAR_API void car_init_bare_config(Car_Config *config, int size);
+CAR_API bool car_init_default_config(Car_Config *config, int size);
 
 struct Car_Version {
 	int major;
@@ -94,20 +65,17 @@ CAR_API int car_compare_versions(Car_Version *a, Car_Version *b);
 CAR_API Car_Version car_get_linked_version(void);
 
 CAR_API Car_VM *car_new_vm(Car_Config *config);
+
+CAR_API bool car_set_option(Car_VM *vm, int option, int value);
+CAR_API int  car_get_option(Car_VM *vm, int option);
+
 CAR_API void car_free_vm(Car_VM *vm);
 
-enum Car_Interpret_Result {
-	CAR_SUCCESS,
-	CAR_COMPILATION_ERROR,
-	CAR_RUNTIME_ERROR
-};
-typedef enum Car_Interpret_Result Car_Interpret_Result;
+CAR_API bool car_compile_and_run(Car_VM *vm, const char *name, const char *source);
+CAR_API bool car_compile(Car_VM *vm, const char *name, const char *source, int *module_id);
+CAR_API bool car_run_module(Car_VM *vm, int module_id);
 
-CAR_API Car_Interpret_Result car_interpret(
-		Car_VM *vm,
-		const char *module_name,
-		const char *module_path,
-		const char *source
-);
+CAR_API int  car_get_module_count(Car_VM *vm);
+CAR_API const char *car_get_module_name(Car_VM *vm);
 
 #endif // CARDINAL_H
